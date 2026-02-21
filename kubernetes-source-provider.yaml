@@ -1,0 +1,22 @@
+kind: SourceProvider
+apiVersion: v1
+name: Kubernetes
+spec:
+    config_schema:
+        properties:
+            kubeConfig:
+                type: string
+        required:
+            - kubeConfig
+        type: object
+    services:
+        proxy:
+            dapr:
+                app-port: "80"
+            image: source-kubernetes-proxy
+        reactivator:
+            dapr:
+                app-port: "80"
+            deprovisionHandler: true
+            image: source-kubernetes-reactivator
+tag: ""

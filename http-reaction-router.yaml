@@ -1,0 +1,49 @@
+# HTTP Reaction: forwards Pod events to your router.py /receive endpoint
+# Prereq: Run router.py and ensure it's reachable from cluster
+# For k3d: http://host.k3d.internal:6000 (router on host:6000)
+# Use: drasi apply -f http-reaction-router.yaml -n drasi-system
+apiVersion: v1
+kind: Reaction
+name: pod-watch-http
+spec:
+  kind: Http
+  properties:
+    baseUrl: "http://host.k3d.internal:6000"
+  queries:
+    pod-watch:
+      added:
+        url: "/receive"
+        method: "POST"
+        body: |
+          {
+            "action": "added",
+            "data": {
+              "id": "{{after.id}}",
+              "name": "{{after.name}}",
+              "namespace": "{{after.namespace}}",
+              "phase": "{{after.phase}}"
+            }
+          }
+        headers:
+          Content-Type: "application/json"
+      updated:
+        url: "/receive"
+        method: "POST"
+        body: |
+          {
+            "action": "updated",
+            "before": {"id":"{{before.id}}","name":"{{before.name}}","namespace":"{{before.namespace}}","phase":"{{before.phase}}"},
+            "after": {"id":"{{after.id}}","name":"{{after.name}}","namespace":"{{after.namespace}}","phase":"{{after.phase}}"}
+          }
+        headers:
+          Content-Type: "application/json"
+      deleted:
+        url: "/receive"
+        method: "POST"
+        body: |
+          {
+            "action": "deleted",
+            "data": {"id":"{{before.id}}","name":"{{before.name}}","namespace":"{{before.namespace}}","phase":"{{before.phase}}"}
+          }
+        headers:
+          Content-Type: "application/json"

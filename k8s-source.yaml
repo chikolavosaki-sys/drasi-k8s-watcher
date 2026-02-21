@@ -1,0 +1,12 @@
+apiVersion: v1.drasi.io/v1
+kind: Source
+metadata:
+  name: k8s-events
+  namespace: default
+spec:
+  kind: Kubernetes
+  properties:
+    allNamespaces: true
+    resources:
+      - apiVersion: v1
+        kind: Pod

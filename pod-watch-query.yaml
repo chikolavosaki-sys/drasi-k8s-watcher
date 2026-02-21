@@ -1,0 +1,20 @@
+# Continuous Query: watches Pod changes from k8s-events source
+# Use: drasi apply -f pod-watch-query.yaml -n drasi-system
+apiVersion: v1
+kind: ContinuousQuery
+name: pod-watch
+spec:
+  mode: query
+  sources:
+    subscriptions:
+      - id: k8s-events
+        nodes:
+          - sourceLabel: Pod
+  query: >
+    MATCH (p:Pod)
+    RETURN
+      elementId(p) AS id,
+      p.metadata.name AS name,
+      p.metadata.namespace AS namespace,
+      p.status.phase AS phase
+    LIMIT 100
