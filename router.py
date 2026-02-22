@@ -1,56 +1,36 @@
 import logging
-from fastapi import FastAPI, Request
-import uvicorn
-
-# Import the Agent from the Dapr SDK
-from dapr_agents import Agent
+import asyncio
+from dapr_agents import DurableAgent
+from dapr_agents.workflow.runners import AgentRunner
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("k8s-agent")
 
-app = FastAPI()
-
-# Initialize the Drasi Kubernetes observer agent
-k8s_observer_agent = Agent(
-    name="DrasiK8sObserver",
-    role="Infrastructure Monitor",
-    instructions=["Monitor Drasi continuous queries for Kubernetes state changes."]
-)
-
-@app.get("/dapr/subscribe")
-def subscribe():
-    """
-    Dapr pub/sub registration endpoint.
-    """
-    logger.info("Registering pub/sub topic with Dapr sidecar...")
-    return [{
-        "pubsubname": "drasi-pubsub",
-        "topic": "k8s-alerts",
-        "route": "/k8s-reaction"
-    }]
-
-@app.post("/k8s-reaction")
-async def react_to_k8s_event(request: Request):
-    """
-    Handles incoming events from Drasi via Dapr.
-    """
-    cloud_event = await request.json()
+async def main():
+    logger.info("Initializing Drasi K8s Observer Agent...")
     
-    # Extract the actual payload from the CloudEvent wrapper
-    event_data = cloud_event.get("data", cloud_event)
+    # Define the DurableAgent (Workflow-backed for reliability)
+    k8s_observer_agent = DurableAgent(
+        name="DrasiK8sObserver",
+        role="Infrastructure Monitor",
+        instructions=[
+            "You monitor Drasi continuous queries for Kubernetes state changes.",
+            "Analyze incoming event payloads to track infrastructure health."
+        ]
+    )
 
-    logger.info("Received Drasi event via Dapr")
+    # Initialize the official Agent Runner
+    runner = AgentRunner()
 
-    if "deletedResults" in event_data:
-        deleted_count = len(event_data['deletedResults'])
-        logger.info(f"K8s Resource(s) deleted: {deleted_count} items found.")
-
-    if "addedResults" in event_data:
-        added_count = len(event_data['addedResults'])
-        logger.info(f"K8s Resource(s) added: {added_count} items found.")
-
-    return {"status": "SUCCESS"}
+    logger.info("Subscribing reactive agent to Drasi pub/sub...")
+    
+    # Subscribe the agent directly to the Dapr pub/sub topic
+    await runner.subscribe(
+        agent=k8s_observer_agent,
+        pubsub_name="drasi-pubsub",
+        topic="k8s-alerts",
+        port=8081
+    )
 
 if __name__ == "__main__":
-    logger.info("Starting Dapr reactive agent on port 8081...")
-    uvicorn.run(app, host="0.0.0.0", port=8081)
+    asyncio.run(main())
