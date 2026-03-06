@@ -1,0 +1,8 @@
+apiVersion: drasi.io/v1
+kind: Source
+metadata:
+  name: k8s-source
+spec:
+  kind: kubernetes
+  properties:
+    watchNamespaces: ["default"]
